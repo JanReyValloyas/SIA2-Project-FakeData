@@ -4,7 +4,7 @@ from tkinter import messagebox, ttk
 from faker import Faker
 from auth import hash_password, verify_password
 
-# Initialize Faker (Pwedeng Tagalog/Filipino locale o English)
+# Initialize Faker (English locale)
 fake = Faker('en_PH')
 
 ctk.set_appearance_mode("System")
@@ -33,10 +33,10 @@ class App(ctk.CTk):
         title = ctk.CTkLabel(frame, text="Login System", font=("Arial", 20, "bold"))
         title.pack(pady=20)
 
-        self.user_entry = ctk.CTkEntry(frame, placeholderText="Username")
+        self.user_entry = ctk.CTkEntry(frame, placeholder_text="Username")
         self.user_entry.pack(pady=10, width=250)
 
-        self.pass_entry = ctk.CTkEntry(frame, placeholderText="Password", show="*")
+        self.pass_entry = ctk.CTkEntry(frame, placeholder_text="Password", show="*")
         self.pass_entry.pack(pady=10, width=250)
 
         login_btn = ctk.CTkButton(frame, text="Login", command=self.handle_login)
@@ -50,7 +50,7 @@ class App(ctk.CTk):
         password = self.pass_entry.get()
 
         if not username or not password:
-            messagebox.showerror("Error", "Lahat ng fields ay kailangang punan!")
+            messagebox.showerror("Error", "All fields must be filled out!")
             return
 
         pwd_hash, salt = hash_password(password)
@@ -62,9 +62,9 @@ class App(ctk.CTk):
                            (username, pwd_hash, salt))
             conn.commit()
             conn.close()
-            messagebox.SUCCESS = messagebox.showinfo("Tagumpay", "Account created successfully! Pwede ka na mag-login.")
+            messagebox.showinfo("Success", "Account created successfully! You can now log in.")
         except sqlite3.IntegrityError:
-            messagebox.showerror("Error", "May kapareho nang username na ginamit.")
+            messagebox.showerror("Error", "Username already exists.")
 
     def handle_login(self):
         username = self.user_entry.get()
@@ -79,7 +79,7 @@ class App(ctk.CTk):
         if result and verify_password(result[0], result[1], password):
             self.show_dashboard()
         else:
-            messagebox.showerror("Error", "Mali ang username o password.")
+            messagebox.showerror("Error", "Invalid username or password.")
 
     # --- MAIN DASHBOARD (Fake Data Generation) ---
     def show_dashboard(self):
@@ -98,7 +98,7 @@ class App(ctk.CTk):
         logout_btn = ctk.CTkButton(control_frame, text="Logout", fg_color="red", command=self.show_login_frame)
         logout_btn.pack(side="right", padx=10, pady=10)
 
-        # Table / Treeview para sa Data Display
+        # Table / Treeview for Data Display
         self.tree_frame = ctk.CTkFrame(self)
         self.tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
@@ -123,7 +123,7 @@ class App(ctk.CTk):
             conn = sqlite3.connect("app_data.db")
             cursor = conn.cursor()
 
-            # Mag-generate ng 10 records (o higit pa) na may 10 fields bawat isa
+            # Generate 10 records with 10 fields each
             for _ in range(10):
                 name = fake.name()
                 address = fake.address().replace("\n", ", ")
@@ -144,7 +144,7 @@ class App(ctk.CTk):
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Tagumpay", "Matagumpay na nakagawa at na-save ang 10 bagong fake records!")
+            messagebox.showinfo("Success", "Successfully generated and saved 10 new fake records!")
             self.load_data_to_table()
 
         def load_data_to_table(self):
@@ -165,4 +165,3 @@ class App(ctk.CTk):
         init_db()
         app = App()
         app.mainloop()
-

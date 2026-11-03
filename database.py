@@ -5,7 +5,7 @@ def init_db():
     conn = sqlite3.connect("app_data.db")
     cursor = conn.cursor()
 
-    # Table para sa Login / Users
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,7 +15,7 @@ def init_db():
         )
     """)
 
-    # Table para sa Fake Data (10 fields)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS fake_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,4 +38,4 @@ def init_db():
 
 if name == "main":
     init_db()
-    print("Database at tables ay matagumpay na nagawa!")
+    print("Database and tables successfully created!")
