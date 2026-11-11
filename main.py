@@ -1,4 +1,5 @@
 import sqlite3
+import random
 import customtkinter as ctk
 from tkinter import messagebox, ttk
 from faker import Faker
@@ -15,7 +16,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("SIA2 - Login System")
-        self.geometry("800x600")
+        self.geometry("900x650")
 
         self.show_login_frame()
 
@@ -26,6 +27,7 @@ class App(ctk.CTk):
     # --- LOGIN / REGISTER SCREEN ---
     def show_login_frame(self):
         self.clear_window()
+        self.title("SIA2 - Login System")
 
         frame = ctk.CTkFrame(self)
         frame.place(relx=0.5, rely=0.5, anchor="center")
@@ -39,11 +41,27 @@ class App(ctk.CTk):
         self.pass_entry = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=250)
         self.pass_entry.pack(pady=10)
 
+        self.show_pass_var = ctk.BooleanVar(value=False)
+        show_pass_chk = ctk.CTkCheckBox(
+            frame,
+            text="Show Password",
+            variable=self.show_pass_var,
+            command=self.toggle_password_visibility,
+            font=("Arial", 11)
+        )
+        show_pass_chk.pack(pady=5, anchor="w", padx=25)
+
         login_btn = ctk.CTkButton(frame, text="Login", command=self.handle_login)
         login_btn.pack(pady=10)
 
         reg_btn = ctk.CTkButton(frame, text="Register", fg_color="green", command=self.handle_register)
         reg_btn.pack(pady=5)
+
+    def toggle_password_visibility(self):
+        if self.show_pass_var.get():
+            self.pass_entry.configure(show="")
+        else:
+            self.pass_entry.configure(show="*")
 
     def handle_register(self):
         username = self.user_entry.get()
@@ -77,6 +95,7 @@ class App(ctk.CTk):
         conn.close()
 
         if result and verify_password(result[0], result[1], password):
+            self.title("SIA2 - Fake Data Generation Dashboard")
             self.show_dashboard()
         else:
             messagebox.showerror("Error", "Invalid username or password.")
@@ -85,16 +104,18 @@ class App(ctk.CTk):
     def show_dashboard(self):
         self.clear_window()
 
-        # Header
         header = ctk.CTkLabel(self, text="Fake Data Generation Dashboard (Option 3B.3)", font=("Arial", 18, "bold"))
         header.pack(pady=10, padx=20, anchor="w")
 
-        # Control Panel (Top)
         control_frame = ctk.CTkFrame(self)
         control_frame.pack(fill="x", padx=20, pady=5)
 
-        gen_btn = ctk.CTkButton(control_frame, text="Generate 10+ Fake Records", command=self.generate_and_save_data)
+        gen_btn = ctk.CTkButton(control_frame, text="Generate Records", command=self.generate_and_save_data)
         gen_btn.pack(side="left", padx=5, pady=10)
+
+        self.count_entry = ctk.CTkEntry(control_frame, width=60, justify="center")
+        self.count_entry.insert(0, "10")
+        self.count_entry.pack(side="left", padx=5, pady=10)
 
         del_selected_btn = ctk.CTkButton(control_frame, text="Delete Selected", fg_color="#d9534f", command=self.delete_selected_row)
         del_selected_btn.pack(side="left", padx=5, pady=10)
@@ -109,7 +130,6 @@ class App(ctk.CTk):
         logout_btn = ctk.CTkButton(control_frame, text="Logout", fg_color="red", command=self.show_login_frame)
         logout_btn.pack(side="right", padx=5, pady=10)
 
-        # Search & Counter Panel (Middle)
         search_frame = ctk.CTkFrame(self, fg_color="transparent")
         search_frame.pack(fill="x", padx=20, pady=5)
 
@@ -120,16 +140,14 @@ class App(ctk.CTk):
         self.count_label = ctk.CTkLabel(search_frame, text="Total Records: 0", font=("Arial", 12, "bold"))
         self.count_label.pack(side="right", padx=5)
 
-        # Responsive Table Frame
         self.tree_frame = ctk.CTkFrame(self)
         self.tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # Kailangan munang buoin ang table bago i-load ang data
         self.create_table()
         self.load_data_to_table()
 
     def create_table(self):
-        columns = ("ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Job", "City", "Company", "Card", "IP")
+        columns = ("ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Username", "Job Title", "Company", "City", "Country", "Blood Type", "Website")
 
         table_container = ctk.CTkFrame(self.tree_frame)
         table_container.pack(fill="both", expand=True)
@@ -138,7 +156,7 @@ class App(ctk.CTk):
 
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=140, anchor="w", stretch=False)
+            self.tree.column(col, width=130, anchor="w", stretch=False)
 
         scrollbar_y = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
         scrollbar_x = ttk.Scrollbar(table_container, orient="horizontal", command=self.tree.xview)
@@ -153,30 +171,43 @@ class App(ctk.CTk):
         table_container.grid_columnconfigure(0, weight=1)
 
     def generate_and_save_data(self):
+        try:
+            num_records = int(self.count_entry.get())
+            if num_records < 10:
+                messagebox.showerror("Invalid Input", "Minimum records to generate must be at least 10.")
+                return
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number for record count.")
+            return
+
         conn = sqlite3.connect("app_data.db")
         cursor = conn.cursor()
 
-        for _ in range(10):
+        blood_types = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+
+        for _ in range(num_records):
             name = fake.name()
             address = fake.address().replace("\n", ", ")
             birthdate = str(fake.date_of_birth(minimum_age=18, maximum_age=60))
             mobile = fake.numerify(text="09#########")
             email = fake.email()
+            username = fake.user_name()
             job = fake.job()
-            city = fake.city()
             company = fake.company()
-            credit_card = fake.credit_card_number(card_type='visa')
-            ip = fake.ipv4()
+            city = fake.city()
+            country = fake.current_country()
+            blood_type = random.choice(blood_types)  # Pinalitan para maiwasan ang error
+            website = fake.url()
 
             cursor.execute("""
-                INSERT INTO fake_records (name, address, birthdate, mobile_number, email, job, city, company, credit_card, ip_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (name, address, birthdate, mobile, email, job, city, company, credit_card, ip))
+                INSERT INTO fake_records (name, address, birthdate, mobile_number, email, username, job, company, city, country, blood_type, website)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (name, address, birthdate, mobile, email, username, job, company, city, country, blood_type, website))
 
         conn.commit()
         conn.close()
 
-        messagebox.showinfo("Success", "Successfully generated and saved 10 new fake records!")
+        messagebox.showinfo("Success", f"Successfully generated and saved {num_records} new fake records!")
         self.load_data_to_table()
 
     def delete_selected_row(self):
@@ -221,7 +252,7 @@ class App(ctk.CTk):
             rows = cursor.fetchall()
             conn.close()
 
-            columns = ["ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Job", "City", "Company", "Card", "IP"]
+            columns = ["ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Username", "Job Title", "Company", "City", "Country", "Blood Type", "Website"]
 
             with open(file_path, mode="w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
@@ -245,7 +276,7 @@ class App(ctk.CTk):
         display_index = 1
         for row in rows:
             if query in str(row[1]).lower() or query in str(row[6]).lower():
-                display_row = (display_index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
+                display_row = (display_index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
                 self.tree.insert("", "end", values=display_row, tags=(row[0],))
                 count += 1
                 display_index += 1
@@ -264,7 +295,7 @@ class App(ctk.CTk):
 
         count = 0
         for index, row in enumerate(rows, start=1):
-            display_row = (index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
+            display_row = (index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
             self.tree.insert("", "end", values=display_row, tags=(row[0],))
             count += 1
 
