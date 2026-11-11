@@ -36,6 +36,6 @@ def init_db():
     conn.close()
 
 
-if name == "main":
+if __name__ == "__main__":
     init_db()
     print("Database and tables successfully created!")
