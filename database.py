@@ -33,15 +33,15 @@ def init_db():
         )
     """)
 
-    # 3. URL Shortener Table (3B.1)
+    # 3. URL Shortener Table (3B.1) na may clicks column
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS urls (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            original_url TEXT NOT NULL,
-            short_code TEXT NOT NULL
-        )
-    """)
-
+            CREATE TABLE IF NOT EXISTS urls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                original_url TEXT NOT NULL,
+                short_code TEXT NOT NULL,
+                clicks INTEGER DEFAULT 0
+            )
+        """)
     # 4. Messaging Table (3B.2 - SMS & Email)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
