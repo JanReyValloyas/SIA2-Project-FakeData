@@ -1,22 +1,22 @@
 import sqlite3
 import random
+import string
 import customtkinter as ctk
 from tkinter import messagebox, ttk
 from faker import Faker
 from auth import hash_password, verify_password
 
-# Initialize Faker (English locale)
+# Initialize Faker
 fake = Faker('en_PH')
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("SIA2 - Login System")
-        self.geometry("900x650")
+        self.geometry("1000x700")
 
         self.show_login_frame()
 
@@ -43,10 +43,8 @@ class App(ctk.CTk):
 
         self.show_pass_var = ctk.BooleanVar(value=False)
         show_pass_chk = ctk.CTkCheckBox(
-            frame,
-            text="Show Password",
-            variable=self.show_pass_var,
-            command=self.toggle_password_visibility,
+            frame, text="Show Password", variable=self.show_pass_var,
+            command=lambda: self.pass_entry.configure(show="" if self.show_pass_var.get() else "*"),
             font=("Arial", 11)
         )
         show_pass_chk.pack(pady=5, anchor="w", padx=25)
@@ -57,37 +55,26 @@ class App(ctk.CTk):
         reg_btn = ctk.CTkButton(frame, text="Register", fg_color="green", command=self.handle_register)
         reg_btn.pack(pady=5)
 
-    def toggle_password_visibility(self):
-        if self.show_pass_var.get():
-            self.pass_entry.configure(show="")
-        else:
-            self.pass_entry.configure(show="*")
-
     def handle_register(self):
         username = self.user_entry.get()
         password = self.pass_entry.get()
-
         if not username or not password:
             messagebox.showerror("Error", "All fields must be filled out!")
             return
-
         pwd_hash, salt = hash_password(password)
-
         try:
             conn = sqlite3.connect("app_data.db")
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO users (username, password, salt) VALUES (?, ?, ?)",
-                           (username, pwd_hash, salt))
+            cursor.execute("INSERT INTO users (username, password, salt) VALUES (?, ?, ?)", (username, pwd_hash, salt))
             conn.commit()
             conn.close()
-            messagebox.showinfo("Success", "Account created successfully! You can now log in.")
+            messagebox.showinfo("Success", "Account created successfully!")
         except sqlite3.IntegrityError:
             messagebox.showerror("Error", "Username already exists.")
 
     def handle_login(self):
         username = self.user_entry.get()
         password = self.pass_entry.get()
-
         conn = sqlite3.connect("app_data.db")
         cursor = conn.cursor()
         cursor.execute("SELECT password, salt FROM users WHERE username = ?", (username,))
@@ -95,20 +82,42 @@ class App(ctk.CTk):
         conn.close()
 
         if result and verify_password(result[0], result[1], password):
-            self.title("SIA2 - Fake Data Generation Dashboard")
-            self.show_dashboard()
+            self.title("SIA2 - Utilities Dashboard (3B)")
+            self.show_main_dashboard()
         else:
             messagebox.showerror("Error", "Invalid username or password.")
 
-    # --- MAIN DASHBOARD (Fake Data Generation) ---
-    def show_dashboard(self):
+    # --- MAIN DASHBOARD WITH TABS ---
+    def show_main_dashboard(self):
         self.clear_window()
 
-        header = ctk.CTkLabel(self, text="Fake Data Generation Dashboard (Option 3B.3)", font=("Arial", 18, "bold"))
-        header.pack(pady=10, padx=20, anchor="w")
+        # Top Bar with Logout
+        top_frame = ctk.CTkFrame(self, fg_color="transparent")
+        top_frame.pack(fill="x", padx=20, pady=10)
 
-        control_frame = ctk.CTkFrame(self)
-        control_frame.pack(fill="x", padx=20, pady=5)
+        title_lbl = ctk.CTkLabel(top_frame, text="SIA2 Utilities Dashboard (Option 3B)", font=("Arial", 18, "bold"))
+        title_lbl.pack(side="left")
+
+        logout_btn = ctk.CTkButton(top_frame, text="Logout", fg_color="red", width=80, command=self.show_login_frame)
+        logout_btn.pack(side="right")
+
+        # Tabview for Modules (3B.1, 3B.2, 3B.3)
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(fill="both", expand=True, padx=20, pady=10)
+
+        self.tab_fake = self.tabview.add("3B.3 Fake Data Gen")
+        self.tab_url = self.tabview.add("3B.1 URL Shortener")
+        self.tab_msg = self.tabview.add("3B.2 Messaging")
+
+        # Build each module UI
+        self.setup_fake_data_tab()
+        self.setup_url_tab()
+        self.setup_messaging_tab()
+
+    # --- MODULE 3B.3: FAKE DATA GEN ---
+    def setup_fake_data_tab(self):
+        control_frame = ctk.CTkFrame(self.tab_fake)
+        control_frame.pack(fill="x", padx=10, pady=5)
 
         gen_btn = ctk.CTkButton(control_frame, text="Generate Records", command=self.generate_and_save_data)
         gen_btn.pack(side="left", padx=5, pady=10)
@@ -117,194 +126,297 @@ class App(ctk.CTk):
         self.count_entry.insert(0, "10")
         self.count_entry.pack(side="left", padx=5, pady=10)
 
-        del_selected_btn = ctk.CTkButton(control_frame, text="Delete Selected", fg_color="#d9534f", command=self.delete_selected_row)
-        del_selected_btn.pack(side="left", padx=5, pady=10)
+        del_btn = ctk.CTkButton(control_frame, text="Delete Selected", fg_color="#d9534f", command=self.delete_fake_row)
+        del_btn.pack(side="left", padx=5, pady=10)
 
-        clear_btn = ctk.CTkButton(control_frame, text="Clear All Data", fg_color="orange", text_color="black",
-                                  command=self.clear_all_data)
+        clear_btn = ctk.CTkButton(control_frame, text="Clear All", fg_color="orange", text_color="black", command=self.clear_fake_data)
         clear_btn.pack(side="left", padx=5, pady=10)
 
-        export_btn = ctk.CTkButton(control_frame, text="Export to CSV", fg_color="green", command=self.export_to_csv)
+        export_btn = ctk.CTkButton(control_frame, text="Export CSV", fg_color="green", command=self.export_fake_csv)
         export_btn.pack(side="left", padx=5, pady=10)
 
-        logout_btn = ctk.CTkButton(control_frame, text="Logout", fg_color="red", command=self.show_login_frame)
-        logout_btn.pack(side="right", padx=5, pady=10)
+        search_frame = ctk.CTkFrame(self.tab_fake, fg_color="transparent")
+        search_frame.pack(fill="x", padx=10, pady=5)
 
-        search_frame = ctk.CTkFrame(self, fg_color="transparent")
-        search_frame.pack(fill="x", padx=20, pady=5)
-
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search by Name or Job...", width=300)
-        self.search_entry.pack(side="left", padx=0)
-        self.search_entry.bind("<KeyRelease>", self.filter_table)
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search by Name or Job...", width=250)
+        self.search_entry.pack(side="left")
+        self.search_entry.bind("<KeyRelease>", self.filter_fake_table)
 
         self.count_label = ctk.CTkLabel(search_frame, text="Total Records: 0", font=("Arial", 12, "bold"))
         self.count_label.pack(side="right", padx=5)
 
-        self.tree_frame = ctk.CTkFrame(self)
-        self.tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        # Table Container
+        tree_container = ctk.CTkFrame(self.tab_fake)
+        tree_container.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.create_table()
-        self.load_data_to_table()
-
-    def create_table(self):
         columns = ("ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Username", "Job Title", "Company", "City", "Country", "Blood Type", "Website")
-
-        table_container = ctk.CTkFrame(self.tree_frame)
-        table_container.pack(fill="both", expand=True)
-
-        self.tree = ttk.Treeview(table_container, columns=columns, show="headings")
+        self.fake_tree = ttk.Treeview(tree_container, columns=columns, show="headings")
 
         for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=130, anchor="w", stretch=False)
+            self.fake_tree.heading(col, text=col)
+            self.fake_tree.column(col, width=120, anchor="w")
 
-        scrollbar_y = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
-        scrollbar_x = ttk.Scrollbar(table_container, orient="horizontal", command=self.tree.xview)
+        sb_y = ttk.Scrollbar(tree_container, orient="vertical", command=self.fake_tree.yview)
+        sb_x = ttk.Scrollbar(tree_container, orient="horizontal", command=self.fake_tree.xview)
+        self.fake_tree.configure(yscrollcommand=sb_y.set, xscrollcommand=sb_x.set)
 
-        self.tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        self.fake_tree.grid(row=0, column=0, sticky="nsew")
+        sb_y.grid(row=0, column=1, sticky="ns")
+        sb_x.grid(row=1, column=0, sticky="ew")
+        tree_container.grid_rowconfigure(0, weight=1)
+        tree_container.grid_columnconfigure(0, weight=1)
 
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        scrollbar_y.grid(row=0, column=1, sticky="ns")
-        scrollbar_x.grid(row=1, column=0, sticky="ew")
-
-        table_container.grid_rowconfigure(0, weight=1)
-        table_container.grid_columnconfigure(0, weight=1)
+        self.load_fake_data()
 
     def generate_and_save_data(self):
         try:
-            num_records = int(self.count_entry.get())
-            if num_records < 10:
-                messagebox.showerror("Invalid Input", "Minimum records to generate must be at least 10.")
+            num = int(self.count_entry.get())
+            if num < 10:
+                messagebox.showerror("Error", "Minimum count is 10.")
                 return
         except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter a valid number for record count.")
+            messagebox.showerror("Error", "Enter a valid number.")
             return
 
         conn = sqlite3.connect("app_data.db")
         cursor = conn.cursor()
+        b_types = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
-        blood_types = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
-
-        for _ in range(num_records):
-            name = fake.name()
-            address = fake.address().replace("\n", ", ")
-            birthdate = str(fake.date_of_birth(minimum_age=18, maximum_age=60))
-            mobile = fake.numerify(text="09#########")
-            email = fake.email()
-            username = fake.user_name()
-            job = fake.job()
-            company = fake.company()
-            city = fake.city()
-            country = fake.current_country()
-            blood_type = random.choice(blood_types)  # Pinalitan para maiwasan ang error
-            website = fake.url()
-
+        for _ in range(num):
             cursor.execute("""
                 INSERT INTO fake_records (name, address, birthdate, mobile_number, email, username, job, company, city, country, blood_type, website)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (name, address, birthdate, mobile, email, username, job, company, city, country, blood_type, website))
+            """, (fake.name(), fake.address().replace("\n", ", "), str(fake.date_of_birth(minimum_age=18, maximum_age=60)),
+                  fake.numerify("09#########"), fake.email(), fake.user_name(), fake.job(), fake.company(),
+                  fake.city(), fake.current_country(), random.choice(b_types), fake.url()))
+        conn.commit()
+        conn.close()
+        self.load_fake_data()
+        messagebox.showinfo("Success", f"Generated {num} records!")
 
+    def load_fake_data(self):
+        for i in self.fake_tree.get_children(): self.fake_tree.delete(i)
+        conn = sqlite3.connect("app_data.db")
+        rows = conn.cursor().execute("SELECT * FROM fake_records").fetchall()
+        conn.close()
+        for idx, row in enumerate(rows, start=1):
+            self.fake_tree.insert("", "end", values=(idx, *row[1:]), tags=(row[0],))
+        self.count_label.configure(text=f"Total Records: {len(rows)}")
+
+    def delete_fake_row(self):
+        sel = self.fake_tree.selection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a record to delete.")
+            return
+        rid = self.fake_tree.item(sel, "tags")[0]
+        conn = sqlite3.connect("app_data.db")
+        conn.cursor().execute("DELETE FROM fake_records WHERE id = ?", (rid,))
+        conn.commit()
+        conn.close()
+        self.load_fake_data()
+
+    def clear_fake_data(self):
+        if messagebox.askyesno("Confirm", "Clear all records?"):
+            conn = sqlite3.connect("app_data.db")
+            conn.cursor().execute("DELETE FROM fake_records")
+            conn.cursor().execute("DELETE FROM sqlite_sequence WHERE name='fake_records'")
+            conn.commit()
+            conn.close()
+            self.load_fake_data()
+
+    def export_fake_csv(self):
+        import csv
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")])
+        if path:
+            conn = sqlite3.connect("app_data.db")
+            rows = conn.cursor().execute("SELECT * FROM fake_records").fetchall()
+            conn.close()
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Username", "Job", "Company", "City", "Country", "Blood", "Website"])
+                w.writerows(rows)
+            messagebox.showinfo("Success", "Exported successfully!")
+
+    def filter_fake_table(self, event):
+        q = self.search_entry.get().lower()
+        for i in self.fake_tree.get_children(): self.fake_tree.delete(i)
+        conn = sqlite3.connect("app_data.db")
+        rows = conn.cursor().execute("SELECT * FROM fake_records").fetchall()
+        conn.close()
+        c = 1
+        for row in rows:
+            if q in str(row[1]).lower() or q in str(row[6]).lower():
+                self.fake_tree.insert("", "end", values=(c, *row[1:]), tags=(row[0],))
+                c += 1
+        self.count_label.configure(text=f"Filtered Records: {c-1}")
+
+    # --- MODULE 3B.1: URL SHORTENER ---
+    def setup_url_tab(self):
+        frame = ctk.CTkFrame(self.tab_url)
+        frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        ctk.CTkLabel(frame, text="Original URL:", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
+        self.orig_url_entry = ctk.CTkEntry(frame, placeholder_text="https://example.com/very-long-link", width=500)
+        self.orig_url_entry.pack(anchor="w", padx=10, pady=5)
+
+        short_btn = ctk.CTkButton(frame, text="Shorten URL", fg_color="blue", command=self.shorten_url)
+        short_btn.pack(anchor="w", padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Generated Shortened URLs & Testing:", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=10)
+
+        # URL Treeview table
+        columns = ("ID", "Original URL", "Shortened URL")
+        self.url_tree = ttk.Treeview(frame, columns=columns, show="headings", height=8)
+        for col in columns:
+            self.url_tree.heading(col, text=col)
+            self.url_tree.column(col, width=250, anchor="w")
+        self.url_tree.pack(fill="both", expand=True, padx=10, pady=5)
+
+        test_btn = ctk.CTkButton(frame, text="Test Selected URL (Open in Browser)", fg_color="green", command=self.test_url)
+        test_btn.pack(anchor="w", padx=10, pady=10)
+
+        self.load_url_data()
+
+    def shorten_url(self):
+        orig = self.orig_url_entry.get().strip()
+        if not orig:
+            messagebox.showerror("Error", "Please enter an original URL.")
+            return
+        code = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        short_url = f"http://short.ly/{code}"
+
+        conn = sqlite3.connect("app_data.db")
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO urls (original_url, short_code) VALUES (?, ?)", (orig, short_url))
         conn.commit()
         conn.close()
 
-        messagebox.showinfo("Success", f"Successfully generated and saved {num_records} new fake records!")
-        self.load_data_to_table()
+        self.orig_url_entry.delete(0, 'end')
+        self.load_url_data()
+        messagebox.showinfo("Success", f"URL Shortened: {short_url}")
 
-    def delete_selected_row(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showwarning("Warning", "Please select a record from the table to delete.")
+    def load_url_data(self):
+        for i in self.url_tree.get_children(): self.url_tree.delete(i)
+        conn = sqlite3.connect("app_data.db")
+        rows = conn.cursor().execute("SELECT * FROM urls").fetchall()
+        conn.close()
+        for idx, row in enumerate(rows, start=1):
+            self.url_tree.insert("", "end", values=(idx, row[1], row[2]), tags=(row[1],))
+
+    def test_url(self):
+        import webbrowser
+        sel = self.url_tree.selection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a shortened URL to test.")
+            return
+        orig_url = self.url_tree.item(sel, "tags")[0]
+        webbrowser.open(orig_url)
+
+    # --- MODULE 3B.2: MESSAGING (SMS & EMAIL) ---
+    def setup_messaging_tab(self):
+        msg_tabview = ctk.CTkTabview(self.tab_msg)
+        msg_tabview.pack(fill="both", expand=True, padx=10, pady=10)
+
+        sms_tab = msg_tabview.add("SMS Utility")
+        email_tab = msg_tabview.add("Email Utility")
+
+        # --- SMS Sub-Tab ---
+        sms_frame = ctk.CTkFrame(sms_tab)
+        sms_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(sms_frame, text="Mobile Number:", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.sms_recipient = ctk.CTkEntry(sms_frame, placeholder_text="09123456789", width=300)
+        self.sms_recipient.pack(anchor="w", padx=10, pady=5)
+
+        ctk.CTkLabel(sms_frame, text="Message Content:", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.sms_content = ctk.CTkTextbox(sms_frame, width=400, height=80)
+        self.sms_content.pack(anchor="w", padx=10, pady=5)
+
+        btn_row = ctk.CTkFrame(sms_frame, fg_color="transparent")
+        btn_row.pack(anchor="w", padx=10, pady=5)
+
+        ctk.CTkButton(btn_row, text="Send SMS", fg_color="blue", command=lambda: self.send_message("SMS", "Sent")).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Simulate Receive SMS", fg_color="orange", text_color="black", command=lambda: self.send_message("SMS", "Received")).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Reply", fg_color="green", command=lambda: self.send_message("SMS", "Reply")).pack(side="left", padx=5)
+
+        # SMS Log Table
+        self.sms_tree = ttk.Treeview(sms_frame, columns=("ID", "Action", "Number", "Message"), show="headings", height=5)
+        for c in ("ID", "Action", "Number", "Message"):
+            self.sms_tree.heading(c, text=c)
+            self.sms_tree.column(c, width=150)
+        self.sms_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # --- Email Sub-Tab ---
+        email_frame = ctk.CTkFrame(email_tab)
+        email_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(email_frame, text="Recipient Email:", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.email_recipient = ctk.CTkEntry(email_frame, placeholder_text="user@example.com", width=300)
+        self.email_recipient.pack(anchor="w", padx=10, pady=5)
+
+        ctk.CTkLabel(email_frame, text="Email Body:", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.email_content = ctk.CTkTextbox(email_frame, width=400, height=80)
+        self.email_content.pack(anchor="w", padx=10, pady=5)
+
+        btn_row_e = ctk.CTkFrame(email_frame, fg_color="transparent")
+        btn_row_e.pack(anchor="w", padx=10, pady=5)
+
+        ctk.CTkButton(btn_row_e, text="Send Email", fg_color="blue", command=lambda: self.send_message("Email", "Sent")).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row_e, text="Simulate Receive Email", fg_color="orange", text_color="black", command=lambda: self.send_message("Email", "Received")).pack(side="left", padx=5)
+
+        # Email Log Table
+        self.email_tree = ttk.Treeview(email_frame, columns=("ID", "Action", "Recipient", "Body"), show="headings", height=5)
+        for c in ("ID", "Action", "Recipient", "Body"):
+            self.email_tree.heading(c, text=c)
+            self.email_tree.column(c, width=150)
+        self.email_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.load_messages()
+
+    def send_message(self, m_type, action):
+        if m_type == "SMS":
+            rec = self.sms_recipient.get().strip()
+            content = self.sms_content.get("1.0", "end-1c").strip()
+        else:
+            rec = self.email_recipient.get().strip()
+            content = self.email_content.get("1.0", "end-1c").strip()
+
+        if not rec or not content:
+            messagebox.showerror("Error", "Please fill out recipient and content fields.")
             return
 
-        if messagebox.askyesno("Confirmation", "Are you sure you want to delete the selected record?"):
-            item_tags = self.tree.item(selected_item, "tags")
-            record_id = item_tags[0]
-
-            conn = sqlite3.connect("app_data.db")
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM fake_records WHERE id = ?", (record_id,))
-            conn.commit()
-            conn.close()
-
-            messagebox.showinfo("Success", "Selected record has been deleted.")
-            self.load_data_to_table()
-
-    def clear_all_data(self):
-        if messagebox.askyesno("Confirmation", "Are you sure you want to delete all records?"):
-            conn = sqlite3.connect("app_data.db")
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM fake_records")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='fake_records'")
-            conn.commit()
-            conn.close()
-            messagebox.showinfo("Success", "All records have been cleared and ID reset to 1.")
-            self.load_data_to_table()
-
-    def export_to_csv(self):
-        import csv
-        from tkinter import filedialog
-
-        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV Files", "*.csv")])
-        if file_path:
-            conn = sqlite3.connect("app_data.db")
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM fake_records")
-            rows = cursor.fetchall()
-            conn.close()
-
-            columns = ["ID", "Name", "Address", "Birthdate", "Mobile", "Email", "Username", "Job Title", "Company", "City", "Country", "Blood Type", "Website"]
-
-            with open(file_path, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(columns)
-                writer.writerows(rows)
-
-            messagebox.showinfo("Success", f"Data successfully exported to {file_path}!")
-
-    def filter_table(self, event):
-        query = self.search_entry.get().lower()
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-
         conn = sqlite3.connect("app_data.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fake_records")
-        rows = cursor.fetchall()
+        cursor.execute("INSERT INTO messages (msg_type, action_type, sender, recipient, content) VALUES (?, ?, ?, ?, ?)",
+                       (m_type, action, "SystemUser", rec, content))
+        conn.commit()
         conn.close()
 
-        count = 0
-        display_index = 1
+        self.load_messages()
+        messagebox.showinfo("Success", f"{m_type} {action} successfully!")
+
+    def load_messages(self):
+        for i in self.sms_tree.get_children(): self.sms_tree.delete(i)
+        for i in self.email_tree.get_children(): self.email_tree.delete(i)
+
+        conn = sqlite3.connect("app_data.db")
+        rows = conn.cursor().execute("SELECT * FROM messages").fetchall()
+        conn.close()
+
+        s_idx, e_idx = 1, 1
         for row in rows:
-            if query in str(row[1]).lower() or query in str(row[6]).lower():
-                display_row = (display_index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
-                self.tree.insert("", "end", values=display_row, tags=(row[0],))
-                count += 1
-                display_index += 1
-
-        self.count_label.configure(text=f"Total Records: {count}")
-
-    def load_data_to_table(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-
-        conn = sqlite3.connect("app_data.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fake_records")
-        rows = cursor.fetchall()
-        conn.close()
-
-        count = 0
-        for index, row in enumerate(rows, start=1):
-            display_row = (index, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
-            self.tree.insert("", "end", values=display_row, tags=(row[0],))
-            count += 1
-
-        self.count_label.configure(text=f"Total Records: {count}")
+            _, m_type, action, _, recipient, content = row
+            if m_type == "SMS":
+                self.sms_tree.insert("", "end", values=(s_idx, action, recipient, content))
+                s_idx += 1
+            else:
+                self.email_tree.insert("", "end", values=(e_idx, action, recipient, content))
+                e_idx += 1
 
 
 if __name__ == "__main__":
     from database import init_db
-
     init_db()
     app = App()
     app.mainloop()
