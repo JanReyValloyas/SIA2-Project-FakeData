@@ -1,24 +1,47 @@
-﻿# SIA 2 Mini Project - Fake Data Generation System
+﻿# SIA2 - Utilities Dashboard (Option 3B)
 
-This is a Python-based desktop application developed for the ITL313-18 (SIA 2 LAB) Final Term Mini Project. It features a secure user authentication system and an automated fake data generator.
+A comprehensive Python-based desktop utility dashboard application developed using **CustomTkinter**, **SQLite**, and **Faker**. This project is built as part of the Systems Integration and Architecture 2 (SIA2) laboratory requirements.
 
-## Features
-1. Graphical User Interface (GUI): Built using Python and CustomTkinter for a modern look.
-2. Secure User Authentication: 
-   - SQLite database for storing user credentials.
-   - Secure password hashing and salting using Python's built-in hashlib.
-3. Mini Project Feature (Option 3B.3 - Fake Data Generation):
-   - Automatically generates realistic fake records containing 10 fields (Name, Address, Birthdate, Mobile Number, Email, Job, City, Company, Credit Card, and IP Address).
-   - Stores and displays the generated data securely inside a local SQLite database table.
+---
 
-## Tech Stack
-* Language: Python
-* GUI Framework: CustomTkinter & Tkinter
-* Database: SQLite3
-* Libraries: Faker, hashlib, os
+## 🚀 Features & Modules
 
-## Setup and Installation
-1. Clone the repository:
+### 1. 🔐 User Authentication
+* Secure user registration and login system.
+* Implements **salted PBKDF2/SHA-256** password hashing (`auth.py`) for enhanced credential security.
+* Modern card-based UI design with show/hide password toggles.
+
+### 2. 📊 3B.3 Fake Data Generation
+* Generates randomized, realistic mock user profiles containing 12 unique data fields (Name, Address, Birthdate, Mobile Number, Email, Username, Job Title, Company, City, Country, Blood Type, and Website).
+* Interactive search filtering across names, jobs, cities, and companies.
+* Data management utilities: Delete selected rows, clear all records, and copy individual records directly to the clipboard.
+* Data export support for both **CSV** and **JSON** file formats.
+
+### 3. 🔗 3B.1 URL Shortener
+* Shortens long URLs into clean, manageable custom links.
+* **Custom Alias Support:** Option to define a personalized short code or generate a random secure string.
+* Click/Testing analytics tracker to monitor how many times a shortened URL has been tested.
+* Built-in browser redirection tool (`webbrowser`) for live link testing and a copy-to-clipboard utility.
+
+### 4. 💬 3B.2 Messaging Utility (SMS & Email)
+* **SMS Module:** Send, simulate receiving, and reply to mobile text messages.
+* **Email Module:** Send and simulate receiving email messages with dedicated logs stored safely in the database.
+* Tabbed sub-interfaces maintaining real-time action logs via structured SQLite tables.
+
+---
+
+## 🛠️ Tech Stack & Requirements
+
+* **Language:** Python 3.x
+* **GUI Framework:** `customtkinter`
+* **Database:** SQLite3 (`app_data.db`)
+* **Libraries:** `faker`, `hashlib`, `os`, `json`, `csv`, `tkinter`
+
+---
+
+## 📦 Installation & Setup
+
+1. **Clone the Repository:**
    ```bash
-   git clone https://github.com
-   ```
+   git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git)
+   cd YOUR_REPOSITORY_NAME
